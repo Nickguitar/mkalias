@@ -1,0 +1,69 @@
+#!/bin/bash
+# mkalias - Tool to improve alias management
+# Nicholas Ferreira  -  30/12/22
+#    0 x 7 3 5 9
+
+mkalias_file="$HOME/.mkalias"
+touch $mkalias_file
+mkalias_function="
+mkalias(){
+	bash `pwd`/$0 \$@; source ~/.bashrc
+}"
+
+# verify whether mkalias is loaded on bashrc
+if [ ! "$(grep '.mkalias' ~/.bashrc)" ]; then
+	read -p "[!] 'source ~/.mkalias' not found in ~/.bashrc. Want to add it? now [Y/n] " p
+	[[ "$p" =~ n|N ]] && echo "[-] Exiting..." && exit
+	echo "source $mkalias_file" >> ~/.bashrc
+fi
+
+# verify whether mkalias function is loaded on bashrc
+if [ ! "$(grep 'mkalias()' ~/.bashrc)" ]; then
+	read -p "[!] 'function mkalias' not found in ~/.bashrc. Want to add it? now [Y/n] " p
+	[[ "$p" =~ n|N ]] && echo "[-] Exiting..." && exit
+	echo "$mkalias_function" >> ~/.bashrc
+fi
+
+function add_alias(){
+	[ -z $2 ] && echo "Usage: mkalias add <alias name> <alias value>" && exit
+	alias_name="$1"
+	shift 1
+	alias_value="$@"
+	alias_exists "$alias_name"
+	echo "alias $alias_name=\"$alias_value\"" >> $mkalias_file
+	echo "Alias $alias_name=\"$alias_value\" added to $mkalias_file"
+	source ~/.bashrc
+	exit
+}
+
+function list_alias(){
+	echo "[*] Aliases from $mkalias_file:" 1>&2
+	cat $mkalias_file | grep .
+	exit
+}
+
+function rm_alias(){
+	[ -z $1 ] && echo "Usage: mkalias rm <alias name>" && exit
+	[ -z "`grep -E \"^alias ${1}=\" ${mkalias_file}`" ] && echo "[-] Alias '$1' doesn't exist in $mkalias_file" && exit
+	echo "[+] Removing alias '$1' from $mkalias_file"
+	sed -Eiz "s/^alias $1=\".*//g" $mkalias_file
+	exit
+}
+
+function alias_exists(){
+	[ "`grep -E \"^alias ${1}=\" ${mkalias_file}`" ] && echo "[-] Alias '$1' already exists in $mkalias_file" && exit
+}
+
+function help(){
+	echo "Usage: $0 <add|ls|rm> [alias name] [alias value]"
+	exit	
+}
+
+function parse_arg(){
+	[[ "$1" =~ add ]] && shift && add_alias $@
+	[[ "$1" =~ ls|list ]] && list_alias
+	[[ "$1" =~ rm|remove ]] && rm_alias $2
+	help
+}
+
+parse_arg $@
