@@ -1,5 +1,5 @@
 #!/bin/bash
-# mkalias - Tool to improve alias management
+# mkalias - Tool to improve aliases management
 # Nicholas Ferreira  -  30/12/22
 #    0 x 7 3 5 9
 
@@ -10,18 +10,21 @@ mkalias(){
 	bash `pwd`/$0 \$@; source ~/.bashrc
 }"
 
-# verify whether mkalias is loaded on bashrc
-if [ ! "$(grep '.mkalias' ~/.bashrc)" ]; then
-	read -p "[!] 'source ~/.mkalias' not found in ~/.bashrc. Want to add it? now [Y/n] " p
+# change as needed
+rcfile="$HOME/.bashrc"
+
+# verify whether mkalias is loaded on $rcfile
+if [ ! "$(grep '.mkalias' $rcfile)" ]; then
+	read -p "[!] 'source ~/.mkalias' not found in $rcfile. Want to add it? now [Y/n] " p
 	[[ "$p" =~ n|N ]] && echo "[-] Exiting..." && exit
-	echo "source $mkalias_file" >> ~/.bashrc
+	echo "source $mkalias_file" >> $rcfile
 fi
 
-# verify whether mkalias function is loaded on bashrc
-if [ ! "$(grep 'mkalias()' ~/.bashrc)" ]; then
-	read -p "[!] 'function mkalias' not found in ~/.bashrc. Want to add it? now [Y/n] " p
+# verify whether mkalias function is loaded on $rcfile
+if [ ! "$(grep 'mkalias()' $rcfile)" ]; then
+	read -p "[!] 'function mkalias' not found in $rcfile. Want to add it? now [Y/n] " p
 	[[ "$p" =~ n|N ]] && echo "[-] Exiting..." && exit
-	echo "$mkalias_function" >> ~/.bashrc
+	echo "$mkalias_function" >> $rcfile
 fi
 
 function add_alias(){
@@ -32,13 +35,17 @@ function add_alias(){
 	alias_exists "$alias_name"
 	echo "alias $alias_name=\"$alias_value\"" >> $mkalias_file
 	echo "Alias $alias_name=\"$alias_value\" added to $mkalias_file"
-	source ~/.bashrc
+	source $rcfile
 	exit
 }
 
+# use 'mkalias ls -s' to sort aliases
 function list_alias(){
+	yellow='\\e[31m'
+	reset='\\e[0m'
 	echo "[*] Aliases from $mkalias_file:" 1>&2
-	cat $mkalias_file | grep .
+	aliases="$(sed -e 's/ \(.*\)=/ \\e[32m\1\\e[0m=/g' -e 's/alias \(.*\)="\(.*\)"$/alias \1=\\e[33m"\2"\\e[0m/g' $mkalias_file )"
+	echo -e "$aliases" | grep . | grep -v "#alias" | $( [ "$1" = "-s" ] && echo 'sort' || echo 'cat' )
 	exit
 }
 
@@ -55,13 +62,13 @@ function alias_exists(){
 }
 
 function help(){
-	echo "Usage: $0 <add|ls|rm> [alias name] [alias value]"
+	echo "Usage: $0 <add|ls|rm> [-s (sort list)] [alias name] [alias value]"
 	exit	
 }
 
 function parse_arg(){
 	[[ "$1" =~ add ]] && shift && add_alias $@
-	[[ "$1" =~ ls|list ]] && list_alias
+	[[ "$1" =~ ls|list ]] && list_alias $2
 	[[ "$1" =~ rm|remove ]] && rm_alias $2
 	help
 }
